@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deluxe Mail</title>
+<style>
+  :root{
+    --bg:#0e0c14; --panel:#171421; --panel2:#1f1b2d; --line:#2e2842;
+    --text:#f3eefc; --muted:#9a90b5; --gold:#e8c26a; --gold2:#b8903a; --danger:#ff7a8a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:radial-gradient(1200px 600px at 20% -10%,#2a1f4a 0%,var(--bg) 60%);color:var(--text);min-height:100vh}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);position:relative;z-index:20;background:rgba(14,12,20,.8);backdrop-filter:blur(8px)}
+  .logo{font-weight:800;letter-spacing:.5px;font-size:20px}
+  .logo span{color:var(--gold)}
+  .right{display:flex;gap:10px;align-items:center}
+  button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 16px;color:var(--text);background:var(--panel2);border:1px solid var(--line)}
+  button:hover{border-color:var(--gold2)}
+  .primary{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1405;font-weight:700;border:0}
+  .primary:hover{filter:brightness(1.08)}
+  input,textarea{width:100%;font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none}
+  input:focus,textarea:focus{border-color:var(--gold2)}
+  label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
+  .dd{position:relative}
+  .menu{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:250px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+  .menu.open{display:block}
+  .menu a{display:block;padding:11px 12px;border-radius:8px;color:var(--text);text-decoration:none}
+  .menu a small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+  .menu a:hover{background:var(--panel2)}
+  main{max-width:1000px;margin:0 auto;padding:24px 16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px}
+  .auth{max-width:430px;margin:40px auto}
+  h1{margin:0 0 6px;font-size:28px}
+  .sub{color:var(--muted);margin:0 0 14px}
+  .tabs{display:flex;gap:6px;margin:16px 0 4px}
+  .tabs button{flex:1}
+  .tabs button.active{border-color:var(--gold);color:var(--gold)}
+  .addr{display:flex;align-items:center;gap:0}
+  .addr input{border-top-right-radius:0;border-bottom-right-radius:0}
+  .addr .dom{padding:11px 12px;background:var(--panel2);border:1px solid var(--line);border-left:0;border-radius:0 10px 10px 0;color:var(--gold);white-space:nowrap}
+  .err{color:var(--danger);min-height:20px;margin:10px 0 0;font-size:14px}
+  .ok{color:#7fe0a5}
+  .layout{display:grid;grid-template-columns:200px 1fr;gap:16px}
+  .side{display:flex;flex-direction:column;gap:6px}
+  .side button{text-align:left}
+  .side button.active{border-color:var(--gold);color:var(--gold)}
+  .list{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-height:300px}
+  .row{display:grid;grid-template-columns:180px 1fr 90px;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center}
+  .row:hover{background:var(--panel2)}
+  .row.unread .from,.row.unread .subj{font-weight:700}
+  .row.unread{box-shadow:inset 3px 0 var(--gold)}
+  .from,.subj{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .prev{color:var(--muted);font-weight:400}
+  .date{color:var(--muted);font-size:12px;text-align:right}
+  .empty{padding:50px;text-align:center;color:var(--muted)}
+  .view{padding:22px}
+  .view pre{white-space:pre-wrap;font:inherit;line-height:1.6;margin:16px 0 0}
+  .meta{color:var(--muted);font-size:14px;line-height:1.6}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+  .modal.open{display:flex}
+  .modal .card{width:100%;max-width:560px}
+  .hide{display:none!important}
+  @media(max-width:720px){
+    .layout{grid-template-columns:1fr}
+    .side{flex-direction:row;overflow-x:auto}
+    .row{grid-template-columns:1fr 70px}
+    .row .subj{grid-column:1/2}
+    .from{grid-column:1/2}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Deluxe<span>Mail</span> ✦</div>
+  <div class="right">
+    <div class="dd">
+      <button id="ddBtn" aria-haspopup="true">Find other websites by Deluxelord ▾</button>
+      <div class="menu" id="menu">
+        <!-- 👇 Replace these two URLs with your real links -->
+        <a href="https://youtube-guide-ai.netlify.app/" target="_blank" rel="noopener">YouTube Guider AI<small>Your AI guide for YouTube</small></a>
+        <a href="https://deluxe-convert-cloud.deluxelordd.workers.dev" target="_blank" rel="noopener">Deluxe Convert<small>Convert your files easily</small></a>
+      </div>
+    </div>
+    <button id="logout" class="hide">Log out</button>
+  </div>
+</header>
+
+<main>
+  <!-- AUTH -->
+  <section id="authView" class="card auth">
+    <h1>Get your deluxe address</h1>
+    <p class="sub">Pick a name. Your inbox is ready instantly.</p>
+    <p class="sub" style="font-size:13px">Deluxe Mail addresses work between Deluxe Mail users.</p>
+    <div class="tabs">
+      <button id="tabSignup" class="active">Create account</button>
+      <button id="tabLogin">Log in</button>
+    </div>
+    <form id="authForm">
+      <div id="displayWrap">
+        <label>Your name</label>
+        <input id="displayName" placeholder="e.g. Alex Carter" maxlength="60">
+      </div>
+      <label>Choose your address</label>
+      <div class="addr">
+        <input id="username" placeholder="yourname" maxlength="30" autocomplete="username" required>
+        <div class="dom">@deluxemail.com</div>
+      </div>
+      <label>Password</label>
+      <input id="password" type="password" placeholder="At least 8 characters" autocomplete="current-password" required>
+      <p class="err" id="authErr"></p>
+      <button class="primary" style="width:100%;margin-top:8px" id="authSubmit">Create my Deluxe account</button>
+    </form>
+  </section>
+
+  <!-- MAIL -->
+  <section id="mailView" class="hide">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div><strong id="myAddr"></strong></div>
+      <button class="primary" id="composeBtn">✎ Compose</button>
+    </div>
+    <div class="layout">
+      <div class="side">
+        <button id="fInbox" class="active">Inbox <span id="unread"></span></button>
+        <button id="fSent">Sent</button>
+        <button id="refresh">↻ Refresh</button>
+      </div>
+      <div class="list" id="list"></div>
+    </div>
+  </section>
+</main>
+
+<!-- COMPOSE -->
+<div class="modal" id="compose">
+  <div class="card">
+    <h1 style="font-size:22px">New message</h1>
+    <label>To</label><input id="to" placeholder="friend@deluxemail.com">
+    <label>Subject</label><input id="subject">
+    <label>Message</label><textarea id="body" rows="8"></textarea>
+    <p class="err" id="sendErr"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button id="cancelSend">Cancel</button>
+      <button class="primary" id="sendBtn">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let mode = "signup", folder = "inbox", token = localStorage.getItem("dm_token"), address = localStorage.getItem("dm_addr");
+
+async function api(path, opts = {}) {
+  const r = await fetch("/api/" + path, {
+    ...opts,
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) },
+  });
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 401 && token) { logout(); }
+  if (!r.ok) throw new Error(data.error || "Something went wrong");
+  return data;
+}
+
+/* dropdown */
+$("ddBtn").onclick = (e) => { e.stopPropagation(); $("menu").classList.toggle("open"); };
+document.addEventListener("click", () => $("menu").classList.remove("open"));
+
+/* tabs */
+function setMode(m) {
+  mode = m;
+  $("tabSignup").classList.toggle("active", m === "signup");
+  $("tabLogin").classList.toggle("active", m === "login");
+  $("displayWrap").classList.toggle("hide", m === "login");
+  $("authSubmit").textContent = m === "signup" ? "Create my Deluxe account" : "Log in";
+  $("authErr").textContent = "";
+}
+$("tabSignup").onclick = () => setMode("signup");
+$("tabLogin").onclick = () => setMode("login");
+
+$("authForm").onsubmit = async (e) => {
+  e.preventDefault();
+  $("authErr").textContent = "";
+  const username = $("username").value.trim().toLowerCase();
+  const password = $("password").value;
+  try {
+    if (mode === "signup") {
+      await api("signup", { method: "POST", body: JSON.stringify({ username, password, displayName: $("displayName").value }) });
+    }
+    const s = await api("login", { method: "POST", body: JSON.stringify({ username, password }) });
+    token = s.token; address = s.address;
+    localStorage.setItem("dm_token", token); localStorage.setItem("dm_addr", address);
+    showMail();
+  } catch (err) { $("authErr").textContent = err.message; }
+};
+
+function logout() {
+  token = null; address = null;
+  localStorage.removeItem("dm_token"); localStorage.removeItem("dm_addr");
+  $("authView").classList.remove("hide"); $("mailView").classList.add("hide"); $("logout").classList.add("hide");
+}
+$("logout").onclick = logout;
+
+/* mail */
+function showMail() {
+  $("authView").classList.add("hide"); $("mailView").classList.remove("hide"); $("logout").classList.remove("hide");
+  $("myAddr").textContent = address;
+  load();
+}
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (t) => { const d = new Date(t); return d.toDateString() === new Date().toDateString() ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString([], { month: "short", day: "numeric" }); };
+
+async function load() {
+  $("list").innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const { messages } = await api("list?folder=" + folder);
+    if (folder === "inbox") { const n = messages.filter((m) => !m.read).length; $("unread").textContent = n ? "(" + n + ")" : ""; }
+    if (!messages.length) { $("list").innerHTML = '<div class="empty">Nothing here yet.</div>'; return; }
+    $("list").innerHTML = "";
+    messages.forEach((m) => {
+      const row = document.createElement("div");
+      row.className = "row" + (m.read ? "" : " unread");
+      row.innerHTML = `<div class="from">${esc(folder === "sent" ? "To: " + m.to : m.from)}</div>
+        <div class="subj">${esc(m.subject)} <span class="prev">— ${esc(m.preview)}</span></div>
+        <div class="date">${fmt(m.date)}</div>`;
+      row.onclick = () => openMsg(m.key);
+      $("list").appendChild(row);
+    });
+  } catch (e) { $("list").innerHTML = '<div class="empty">' + esc(e.message) + "</div>"; }
+}
+
+async function openMsg(key) {
+  const m = await api("message?key=" + encodeURIComponent(key));
+  $("list").innerHTML = `<div class="view">
+    <button id="back">← Back</button>
+    <h2 style="margin:16px 0 6px">${esc(m.subject)}</h2>
+    <div class="meta">From: ${esc(m.from)}<br>To: ${esc(m.to)}<br>${new Date(m.date).toLocaleString()}</div>
+    <pre>${esc(m.body)}</pre>
+    <div style="margin-top:18px;display:flex;gap:8px">
+      <button id="reply">Reply</button><button id="del">Delete</button>
+    </div></div>`;
+  $("back").onclick = load;
+  $("reply").onclick = () => openCompose(folder === "sent" ? m.to : m.from.replace(/.*<(.+)>.*/, "$1"), "Re: " + m.subject);
+  $("del").onclick = async () => { await api("delete", { method: "POST", body: JSON.stringify({ key }) }); load(); };
+}
+
+$("fInbox").onclick = () => { folder = "inbox"; $("fInbox").classList.add("active"); $("fSent").classList.remove("active"); load(); };
+$("fSent").onclick = () => { folder = "sent"; $("fSent").classList.add("active"); $("fInbox").classList.remove("active"); load(); };
+$("refresh").onclick = load;
+
+/* compose */
+function openCompose(to = "", subject = "") {
+  $("to").value = to; $("subject").value = subject; $("body").value = ""; $("sendErr").textContent = "";
+  $("compose").classList.add("open");
+}
+$("composeBtn").onclick = () => openCompose();
+$("cancelSend").onclick = () => $("compose").classList.remove("open");
+$("sendBtn").onclick = async () => {
+  $("sendErr").textContent = "";
+  try {
+    await api("send", { method: "POST", body: JSON.stringify({ to: $("to").value, subject: $("subject").value, body: $("body").value }) });
+    $("compose").classList.remove("open");
+    folder = "sent"; $("fSent").classList.add("active"); $("fInbox").classList.remove("active"); load();
+  } catch (e) { $("sendErr").textContent = e.message; }
+};
+
+/* auto-refresh inbox every 30s */
+setInterval(() => { if (token && folder === "inbox" && !$("mailView").classList.contains("hide") && !document.querySelector(".view")) load(); }, 30000);
+
+if (token && address) showMail();
+</script>
+</body>
+</html>

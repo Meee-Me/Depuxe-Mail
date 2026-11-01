@@ -2,94 +2,161 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Deluxe Mail</title>
 <style>
   :root{
     --bg:#0e0c14; --panel:#171421; --panel2:#1f1b2d; --line:#2e2842;
-    --text:#f3eefc; --muted:#9a90b5; --gold:#e8c26a; --gold2:#b8903a; --danger:#ff7a8a;
+    --text:#f3eefc; --muted:#9a90b5; --gold:#e8c26a; --gold2:#b8903a;
+    --purple:#8b6cff; --purpleSoft:rgba(139,108,255,.18); --danger:#ff7a8a; --hh:60px;
+  }
+  :root[data-theme="light"]{
+    --bg:#f6f5fb; --panel:#ffffff; --panel2:#f0eef8; --line:#e2deef;
+    --text:#1d1830; --muted:#6b6485; --purpleSoft:rgba(139,108,255,.13);
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:radial-gradient(1200px 600px at 20% -10%,#2a1f4a 0%,var(--bg) 60%);color:var(--text);min-height:100vh}
-  header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);position:relative;z-index:20;background:rgba(14,12,20,.8);backdrop-filter:blur(8px)}
-  .logo{font-weight:800;letter-spacing:.5px;font-size:20px}
-  .logo span{color:var(--gold)}
-  .right{display:flex;gap:10px;align-items:center}
-  button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 16px;color:var(--text);background:var(--panel2);border:1px solid var(--line)}
+  html,body{height:100%}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+  button{font:inherit;cursor:pointer;border-radius:10px;padding:9px 14px;color:var(--text);background:var(--panel2);border:1px solid var(--line)}
   button:hover{border-color:var(--gold2)}
   .primary{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1405;font-weight:700;border:0}
   .primary:hover{filter:brightness(1.08)}
+  .icon{padding:8px 11px;line-height:1}
   input,textarea{width:100%;font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none}
-  input:focus,textarea:focus{border-color:var(--gold2)}
+  input:focus,textarea:focus{border-color:var(--purple)}
   label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
+  .hide{display:none!important}
+
+  /* ---------- header ---------- */
+  header{flex:none;display:flex;align-items:center;gap:10px;padding:10px 16px;min-height:var(--hh);border-bottom:1px solid var(--line);background:var(--panel);position:relative;z-index:30;flex-wrap:wrap}
+  .logo{font-weight:800;letter-spacing:.4px;font-size:19px;white-space:nowrap}
+  .logo span{color:var(--gold)}
+  .spacer{flex:1}
   .dd{position:relative}
-  .menu{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:250px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+  .dd>button{font-size:13px}
+  .menu{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:250px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 40px rgba(0,0,0,.45);z-index:60}
   .menu.open{display:block}
-  .menu a{display:block;padding:11px 12px;border-radius:8px;color:var(--text);text-decoration:none}
+  .menu a,.menu .mi{display:block;width:100%;text-align:left;padding:11px 12px;border-radius:8px;color:var(--text);text-decoration:none;background:none;border:0;font-size:14px}
   .menu a small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
-  .menu a:hover{background:var(--panel2)}
-  main{max-width:1000px;margin:0 auto;padding:24px 16px}
+  .menu a:hover,.menu .mi:hover{background:var(--panel2)}
+  .menu .who{padding:10px 12px;color:var(--muted);font-size:13px;border-bottom:1px solid var(--line);margin-bottom:4px;word-break:break-all}
+  .avatar{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex:none;font-size:15px}
+  .avbtn{padding:0;border-radius:50%;border:2px solid var(--line);background:none}
+  @media(max-width:560px){
+    header .dd.sites{order:5;width:100%}
+    header .dd.sites>button{width:100%}
+    header .dd.sites .menu{left:0;right:0}
+  }
+
+  /* ---------- auth ---------- */
+  #authView{flex:1;overflow:auto;padding:24px 16px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px}
-  .auth{max-width:430px;margin:40px auto}
+  .auth{max-width:430px;margin:20px auto}
   h1{margin:0 0 6px;font-size:28px}
-  .sub{color:var(--muted);margin:0 0 14px}
+  .sub{color:var(--muted);margin:0 0 10px}
   .tabs{display:flex;gap:6px;margin:16px 0 4px}
   .tabs button{flex:1}
   .tabs button.active{border-color:var(--gold);color:var(--gold)}
-  .addr{display:flex;align-items:center;gap:0}
+  .addr{display:flex}
   .addr input{border-top-right-radius:0;border-bottom-right-radius:0}
   .addr .dom{padding:11px 12px;background:var(--panel2);border:1px solid var(--line);border-left:0;border-radius:0 10px 10px 0;color:var(--gold);white-space:nowrap}
   .err{color:var(--danger);min-height:20px;margin:10px 0 0;font-size:14px}
-  .ok{color:#7fe0a5}
-  .layout{display:grid;grid-template-columns:200px 1fr;gap:16px}
-  .side{display:flex;flex-direction:column;gap:6px}
-  .side button{text-align:left}
-  .side button.active{border-color:var(--gold);color:var(--gold)}
-  .list{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-height:300px}
-  .row{display:grid;grid-template-columns:180px 1fr 90px;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center}
+
+  /* ---------- mail app (Gmail layout, Proton feel) ---------- */
+  .app{flex:1;min-height:0;display:grid;grid-template-columns:230px 380px 1fr}
+  .nav{background:var(--panel);border-right:1px solid var(--line);padding:14px 10px;display:flex;flex-direction:column;gap:4px;overflow:auto}
+  .nav .compose-btn{margin:0 4px 12px;padding:13px 16px;font-size:15px;border-radius:14px}
+  .nav button.item{display:flex;justify-content:space-between;align-items:center;text-align:left;border:0;background:none;border-radius:10px;padding:10px 14px;color:var(--text)}
+  .nav button.item:hover{background:var(--panel2)}
+  .nav button.item.active{background:var(--purpleSoft);color:var(--purple);font-weight:700}
+  .badge{background:var(--purple);color:#fff;border-radius:999px;font-size:12px;padding:1px 8px;min-width:22px;text-align:center}
+  .nav .foot{margin-top:auto;color:var(--muted);font-size:12px;padding:10px 14px}
+  .listcol{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .toolbar{padding:10px;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line)}
+  .toolbar input{border-radius:999px;padding:9px 14px}
+  .chips{display:flex;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line)}
+  .chip{border-radius:999px;padding:5px 12px;font-size:13px}
+  .chip.active{background:var(--purpleSoft);border-color:var(--purple);color:var(--purple)}
+  .list{overflow:auto;flex:1}
+  .row{display:grid;grid-template-columns:40px 1fr auto;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center}
   .row:hover{background:var(--panel2)}
+  .row.active{background:var(--purpleSoft)}
+  .row .avatar{width:38px;height:38px}
+  .row .top{display:flex;justify-content:space-between;gap:8px}
+  .row .from,.row .subj,.row .prev{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .prev{color:var(--muted);font-size:13px}
+  .row .date{color:var(--muted);font-size:12px;white-space:nowrap}
   .row.unread .from,.row.unread .subj{font-weight:700}
-  .row.unread{box-shadow:inset 3px 0 var(--gold)}
-  .from,.subj{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .prev{color:var(--muted);font-weight:400}
-  .date{color:var(--muted);font-size:12px;text-align:right}
-  .empty{padding:50px;text-align:center;color:var(--muted)}
-  .view{padding:22px}
-  .view pre{white-space:pre-wrap;font:inherit;line-height:1.6;margin:16px 0 0}
-  .meta{color:var(--muted);font-size:14px;line-height:1.6}
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
-  .modal.open{display:flex}
-  .modal .card{width:100%;max-width:560px}
-  .hide{display:none!important}
-  @media(max-width:720px){
-    .layout{grid-template-columns:1fr}
-    .side{flex-direction:row;overflow-x:auto}
-    .row{grid-template-columns:1fr 70px}
-    .row .subj{grid-column:1/2}
-    .from{grid-column:1/2}
+  .row.unread .dot{display:inline-block}
+  .dot{display:none;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-left:6px}
+  .empty{padding:50px 20px;text-align:center;color:var(--muted)}
+  .reader{display:flex;flex-direction:column;min-height:0;background:var(--bg)}
+  .reader .rbar{padding:10px 14px;display:flex;gap:8px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .reader .rbody{padding:22px;overflow:auto;flex:1}
+  .reader h2{margin:0 0 14px;font-size:22px}
+  .who2{display:flex;gap:12px;align-items:center;margin-bottom:18px}
+  .who2 .avatar{width:42px;height:42px}
+  .meta{color:var(--muted);font-size:13px;line-height:1.5}
+  .reader pre{white-space:pre-wrap;word-wrap:break-word;font:inherit;line-height:1.65;margin:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .placeholder{margin:auto;color:var(--muted);text-align:center;padding:20px}
+  .placeholder b{display:block;font-size:40px;color:var(--gold);margin-bottom:8px}
+  .backbtn{display:none}
+  .menubtn{display:none}
+  .scrim{display:none}
+
+  /* compose */
+  .compose{position:fixed;right:24px;bottom:0;width:520px;max-width:100vw;background:var(--panel);border:1px solid var(--line);border-radius:14px 14px 0 0;box-shadow:0 10px 50px rgba(0,0,0,.5);z-index:80;display:none;flex-direction:column}
+  .compose.open{display:flex}
+  .compose .chead{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--panel2);border-radius:14px 14px 0 0;font-weight:700}
+  .compose .cbody{padding:6px 16px 16px}
+  .compose .cbody input,.compose .cbody textarea{border-radius:8px}
+  .compose .cfoot{display:flex;gap:8px;align-items:center;margin-top:12px}
+
+  /* ---------- tablet / phone ---------- */
+  @media(max-width:900px){
+    .app{grid-template-columns:1fr}
+    .menubtn{display:inline-block}
+    .nav{position:fixed;top:0;left:0;bottom:0;width:250px;z-index:90;transform:translateX(-105%);transition:transform .2s}
+    .nav.open{transform:none}
+    .scrim.open{display:block;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:85}
+    .listcol{border-right:0}
+    .reader{display:none}
+    .app.reading .reader{display:flex;position:fixed;inset:0;z-index:70}
+    .backbtn{display:inline-block}
+    .reader .placeholder{display:none}
+    .compose{inset:0;width:100%;max-width:none;border-radius:0;border:0}
+    .compose .chead{border-radius:0}
+    .compose .cbody{flex:1;display:flex;flex-direction:column}
+    .compose textarea{flex:1;min-height:180px}
   }
 </style>
 </head>
 <body>
 
 <header>
+  <button class="icon menubtn hide" id="menuBtn" aria-label="Menu">☰</button>
   <div class="logo">Deluxe<span>Mail</span> ✦</div>
-  <div class="right">
-    <div class="dd">
-      <button id="ddBtn" aria-haspopup="true">Find other websites by Deluxelord ▾</button>
-      <div class="menu" id="menu">
-        <!-- 👇 Replace these two URLs with your real links -->
-        <a href="https://youtube-guide-ai.netlify.app/" target="_blank" rel="noopener">YouTube Guider AI<small>Your AI guide for YouTube</small></a>
-        <a href="https://deluxe-convert-cloud.deluxelordd.workers.dev" target="_blank" rel="noopener">Deluxe Convert<small>Convert your files easily</small></a>
-      </div>
+  <div class="spacer"></div>
+  <div class="dd sites">
+    <button id="ddBtn" aria-haspopup="true">Find other websites by Deluxelord ▾</button>
+    <div class="menu" id="menu">
+      <a href="https://youtube-guide-ai.netlify.app/" target="_blank" rel="noopener">YouTube Guider AI<small>Your AI guide for YouTube</small></a>
+      <a href="https://deluxe-convert-cloud.deluxelordd.workers.dev" target="_blank" rel="noopener">Deluxe Convert<small>Convert your files easily</small></a>
     </div>
-    <button id="logout" class="hide">Log out</button>
+  </div>
+  <div class="dd hide" id="userDd">
+    <button class="avbtn" id="avBtn" aria-label="Account"><span class="avatar" id="meAv">D</span></button>
+    <div class="menu" id="userMenu">
+      <div class="who" id="meAddr"></div>
+      <button class="mi" id="themeBtn">Switch light / dark</button>
+      <button class="mi" id="logout">Log out</button>
+    </div>
   </div>
 </header>
 
-<main>
-  <!-- AUTH -->
-  <section id="authView" class="card auth">
+<!-- AUTH -->
+<section id="authView">
+  <div class="card auth">
     <h1>Get your deluxe address</h1>
     <p class="sub">Pick a name. Your inbox is ready instantly.</p>
     <p class="sub" style="font-size:13px">Deluxe Mail addresses work between Deluxe Mail users.</p>
@@ -104,51 +171,74 @@
       </div>
       <label>Choose your address</label>
       <div class="addr">
-        <input id="username" placeholder="yourname" maxlength="30" autocomplete="username" required>
+        <input id="username" placeholder="yourname" maxlength="30" autocomplete="username" autocapitalize="none" required>
         <div class="dom">@deluxemail.com</div>
       </div>
       <label>Password</label>
       <input id="password" type="password" placeholder="At least 8 characters" autocomplete="current-password" required>
       <p class="err" id="authErr"></p>
-      <button class="primary" style="width:100%;margin-top:8px" id="authSubmit">Create my Deluxe account</button>
+      <button class="primary" style="width:100%;margin-top:8px;padding:12px" id="authSubmit">Create my Deluxe account</button>
     </form>
+  </div>
+</section>
+
+<!-- MAIL -->
+<div class="app hide" id="app">
+  <aside class="nav" id="nav">
+    <button class="primary compose-btn" id="composeBtn">✎ Compose</button>
+    <button class="item active" id="fInbox"><span>📥 Inbox</span><span class="badge hide" id="unread"></span></button>
+    <button class="item" id="fSent"><span>📤 Sent</span></button>
+    <div class="foot">Deluxe Mail ✦</div>
+  </aside>
+
+  <section class="listcol">
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Search mail">
+      <button class="icon" id="refresh" aria-label="Refresh">↻</button>
+    </div>
+    <div class="chips">
+      <button class="chip active" id="cAll">All</button>
+      <button class="chip" id="cUnread">Unread</button>
+    </div>
+    <div class="list" id="list"></div>
   </section>
 
-  <!-- MAIL -->
-  <section id="mailView" class="hide">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-      <div><strong id="myAddr"></strong></div>
-      <button class="primary" id="composeBtn">✎ Compose</button>
-    </div>
-    <div class="layout">
-      <div class="side">
-        <button id="fInbox" class="active">Inbox <span id="unread"></span></button>
-        <button id="fSent">Sent</button>
-        <button id="refresh">↻ Refresh</button>
-      </div>
-      <div class="list" id="list"></div>
-    </div>
+  <section class="reader" id="reader">
+    <div class="placeholder"><b>✦</b>Select a message to read</div>
   </section>
-</main>
+</div>
+<div class="scrim" id="scrim"></div>
 
 <!-- COMPOSE -->
-<div class="modal" id="compose">
-  <div class="card">
-    <h1 style="font-size:22px">New message</h1>
-    <label>To</label><input id="to" placeholder="friend@deluxemail.com">
+<div class="compose" id="compose">
+  <div class="chead"><span>New message</span><button class="icon" id="closeCompose" aria-label="Close">✕</button></div>
+  <div class="cbody">
+    <label>To</label><input id="to" placeholder="friend@deluxemail.com" autocapitalize="none">
     <label>Subject</label><input id="subject">
-    <label>Message</label><textarea id="body" rows="8"></textarea>
+    <label>Message</label><textarea id="body" rows="9"></textarea>
     <p class="err" id="sendErr"></p>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
-      <button id="cancelSend">Cancel</button>
-      <button class="primary" id="sendBtn">Send</button>
+    <div class="cfoot">
+      <button class="primary" id="sendBtn">Send ➤</button>
+      <button id="discard">Discard</button>
     </div>
   </div>
 </div>
 
 <script>
 const $ = (id) => document.getElementById(id);
-let mode = "signup", folder = "inbox", token = localStorage.getItem("dm_token"), address = localStorage.getItem("dm_addr");
+const state = { folder: "inbox", msgs: [], filter: "all", q: "", openKey: null };
+let mode = "signup";
+let token = localStorage.getItem("dm_token");
+let address = localStorage.getItem("dm_addr");
+let myName = localStorage.getItem("dm_name") || "";
+
+/* ---------- helpers ---------- */
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nameOf = (f) => { const m = String(f || "").match(/^\s*"?([^"<]*?)"?\s*<.*>\s*$/); return (m && m[1].trim()) || String(f || "").split("@")[0] || "?"; };
+const emailOf = (f) => { const m = String(f || "").match(/<(.+)>/); return m ? m[1] : String(f || ""); };
+const hue = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const avatarHtml = (f, cls = "") => { const n = nameOf(f); return `<span class="avatar ${cls}" style="background:hsl(${hue(emailOf(f))} 50% 42%)">${esc((n[0] || "?").toUpperCase())}</span>`; };
+const fmt = (t) => { const d = new Date(t); return d.toDateString() === new Date().toDateString() ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString([], { month: "short", day: "numeric" }); };
 
 async function api(path, opts = {}) {
   const r = await fetch("/api/" + path, {
@@ -156,16 +246,28 @@ async function api(path, opts = {}) {
     headers: { "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) },
   });
   const data = await r.json().catch(() => ({}));
-  if (r.status === 401 && token) { logout(); }
+  if (r.status === 401 && token) logout();
   if (!r.ok) throw new Error(data.error || "Something went wrong");
   return data;
 }
 
-/* dropdown */
-$("ddBtn").onclick = (e) => { e.stopPropagation(); $("menu").classList.toggle("open"); };
-document.addEventListener("click", () => $("menu").classList.remove("open"));
+/* ---------- theme ---------- */
+function applyTheme(t) { document.documentElement.setAttribute("data-theme", t); try { localStorage.setItem("dm_theme", t); } catch (e) {} }
+applyTheme((() => { try { return localStorage.getItem("dm_theme"); } catch (e) { return null; } })() || "dark");
+$("themeBtn").onclick = () => applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light");
 
-/* tabs */
+/* ---------- menus ---------- */
+function toggleMenu(id, e) { e.stopPropagation(); ["menu", "userMenu"].forEach((m) => { if (m !== id) $(m).classList.remove("open"); }); $(id).classList.toggle("open"); }
+$("ddBtn").onclick = (e) => toggleMenu("menu", e);
+$("avBtn").onclick = (e) => toggleMenu("userMenu", e);
+document.addEventListener("click", () => { $("menu").classList.remove("open"); $("userMenu").classList.remove("open"); });
+
+/* ---------- drawer ---------- */
+const drawer = (open) => { $("nav").classList.toggle("open", open); $("scrim").classList.toggle("open", open); };
+$("menuBtn").onclick = () => drawer(true);
+$("scrim").onclick = () => drawer(false);
+
+/* ---------- auth ---------- */
 function setMode(m) {
   mode = m;
   $("tabSignup").classList.toggle("active", m === "signup");
@@ -187,86 +289,160 @@ $("authForm").onsubmit = async (e) => {
       await api("signup", { method: "POST", body: JSON.stringify({ username, password, displayName: $("displayName").value }) });
     }
     const s = await api("login", { method: "POST", body: JSON.stringify({ username, password }) });
-    token = s.token; address = s.address;
-    localStorage.setItem("dm_token", token); localStorage.setItem("dm_addr", address);
-    showMail();
-  } catch (err) { $("authErr").textContent = err.message; }
+    token = s.token; address = s.address; myName = s.displayName || username;
+    localStorage.setItem("dm_token", token); localStorage.setItem("dm_addr", address); localStorage.setItem("dm_name", myName);
+    enterMail();
+  } catch (err) {
+    $("authErr").textContent = err.message + (mode === "login" && /Wrong/.test(err.message) ? " New here? Tap “Create account” first." : "");
+  }
 };
 
 function logout() {
   token = null; address = null;
-  localStorage.removeItem("dm_token"); localStorage.removeItem("dm_addr");
-  $("authView").classList.remove("hide"); $("mailView").classList.add("hide"); $("logout").classList.add("hide");
+  ["dm_token", "dm_addr", "dm_name"].forEach((k) => localStorage.removeItem(k));
+  $("authView").classList.remove("hide");
+  ["app", "userDd", "menuBtn"].forEach((id) => $(id).classList.add("hide"));
+  closeReader(); $("compose").classList.remove("open");
 }
 $("logout").onclick = logout;
 
-/* mail */
-function showMail() {
-  $("authView").classList.add("hide"); $("mailView").classList.remove("hide"); $("logout").classList.remove("hide");
-  $("myAddr").textContent = address;
+/* ---------- mail ---------- */
+function enterMail() {
+  $("authView").classList.add("hide");
+  ["app", "userDd", "menuBtn"].forEach((id) => $(id).classList.remove("hide"));
+  $("meAddr").textContent = address;
+  $("meAv").textContent = ((myName || address || "D")[0] || "D").toUpperCase();
+  state.folder = "inbox"; state.q = ""; $("search").value = "";
+  setFolderUi();
   load();
 }
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const fmt = (t) => { const d = new Date(t); return d.toDateString() === new Date().toDateString() ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString([], { month: "short", day: "numeric" }); };
 
-async function load() {
-  $("list").innerHTML = '<div class="empty">Loading…</div>';
+function setFolderUi() {
+  $("fInbox").classList.toggle("active", state.folder === "inbox");
+  $("fSent").classList.toggle("active", state.folder === "sent");
+}
+
+function updateUnread() {
+  if (state.folder !== "inbox") return;
+  const n = state.msgs.filter((m) => !m.read).length;
+  $("unread").textContent = n; $("unread").classList.toggle("hide", !n);
+}
+
+async function load(silent) {
+  if (!silent) $("list").innerHTML = '<div class="empty">Loading…</div>';
   try {
-    const { messages } = await api("list?folder=" + folder);
-    if (folder === "inbox") { const n = messages.filter((m) => !m.read).length; $("unread").textContent = n ? "(" + n + ")" : ""; }
-    if (!messages.length) { $("list").innerHTML = '<div class="empty">Nothing here yet.</div>'; return; }
-    $("list").innerHTML = "";
-    messages.forEach((m) => {
-      const row = document.createElement("div");
-      row.className = "row" + (m.read ? "" : " unread");
-      row.innerHTML = `<div class="from">${esc(folder === "sent" ? "To: " + m.to : m.from)}</div>
-        <div class="subj">${esc(m.subject)} <span class="prev">— ${esc(m.preview)}</span></div>
-        <div class="date">${fmt(m.date)}</div>`;
-      row.onclick = () => openMsg(m.key);
-      $("list").appendChild(row);
-    });
-  } catch (e) { $("list").innerHTML = '<div class="empty">' + esc(e.message) + "</div>"; }
+    const { messages } = await api("list?folder=" + state.folder);
+    state.msgs = messages;
+    updateUnread();
+    renderList();
+  } catch (e) { if (!silent) $("list").innerHTML = '<div class="empty">' + esc(e.message) + "</div>"; }
+}
+
+function renderList() {
+  const q = state.q.toLowerCase();
+  const items = state.msgs.filter((m) =>
+    (state.filter === "all" || !m.read) &&
+    (!q || [m.from, m.to, m.subject, m.preview].some((x) => String(x || "").toLowerCase().includes(q)))
+  );
+  const box = $("list");
+  if (!items.length) { box.innerHTML = '<div class="empty">' + (state.msgs.length ? "No messages match." : "Nothing here yet.") + "</div>"; return; }
+  box.innerHTML = "";
+  items.forEach((m) => {
+    const who = state.folder === "sent" ? m.to : m.from;
+    const row = document.createElement("div");
+    row.className = "row" + (m.read ? "" : " unread") + (m.key === state.openKey ? " active" : "");
+    row.innerHTML = `${avatarHtml(who)}
+      <div style="min-width:0">
+        <div class="top"><div class="from">${esc(state.folder === "sent" ? "To: " + nameOf(who) : nameOf(who))}<span class="dot"></span></div></div>
+        <div class="subj">${esc(m.subject)}</div>
+        <div class="prev">${esc(m.preview)}</div>
+      </div>
+      <div class="date">${fmt(m.date)}</div>`;
+    row.onclick = () => openMsg(m.key);
+    box.appendChild(row);
+  });
 }
 
 async function openMsg(key) {
-  const m = await api("message?key=" + encodeURIComponent(key));
-  $("list").innerHTML = `<div class="view">
-    <button id="back">← Back</button>
-    <h2 style="margin:16px 0 6px">${esc(m.subject)}</h2>
-    <div class="meta">From: ${esc(m.from)}<br>To: ${esc(m.to)}<br>${new Date(m.date).toLocaleString()}</div>
-    <pre>${esc(m.body)}</pre>
-    <div style="margin-top:18px;display:flex;gap:8px">
-      <button id="reply">Reply</button><button id="del">Delete</button>
-    </div></div>`;
-  $("back").onclick = load;
-  $("reply").onclick = () => openCompose(folder === "sent" ? m.to : m.from.replace(/.*<(.+)>.*/, "$1"), "Re: " + m.subject);
-  $("del").onclick = async () => { await api("delete", { method: "POST", body: JSON.stringify({ key }) }); load(); };
+  try {
+    const m = await api("message?key=" + encodeURIComponent(key));
+    state.openKey = key;
+    const local = state.msgs.find((x) => x.key === key);
+    if (local && !local.read) { local.read = true; updateUnread(); }
+    renderList();
+    const who = state.folder === "sent" ? m.to : m.from;
+    $("reader").innerHTML = `
+      <div class="rbar">
+        <button class="backbtn icon" id="back">← Back</button>
+        <button id="reply">↩ Reply</button>
+        <button id="del">🗑 Delete</button>
+      </div>
+      <div class="rbody">
+        <h2>${esc(m.subject)}</h2>
+        <div class="who2">${avatarHtml(who)}
+          <div class="meta"><strong style="color:var(--text)">${esc(nameOf(m.from))}</strong> &lt;${esc(emailOf(m.from))}&gt;<br>
+          To: ${esc(m.to)}<br>${esc(new Date(m.date).toLocaleString())}</div>
+        </div>
+        <pre>${esc(m.body)}</pre>
+      </div>`;
+    $("app").classList.add("reading");
+    $("back").onclick = closeReader;
+    $("reply").onclick = () => openCompose(
+      state.folder === "sent" ? m.to : emailOf(m.from),
+      /^re:/i.test(m.subject) ? m.subject : "Re: " + m.subject,
+      "\n\n— On " + new Date(m.date).toLocaleString() + ", " + nameOf(m.from) + " wrote:\n" + String(m.body).split("\n").map((l) => "> " + l).join("\n")
+    );
+    $("del").onclick = async () => {
+      if (!confirm("Delete this message?")) return;
+      await api("delete", { method: "POST", body: JSON.stringify({ key }) });
+      state.msgs = state.msgs.filter((x) => x.key !== key);
+      closeReader(); updateUnread(); renderList();
+    };
+  } catch (e) { alert(e.message); }
 }
 
-$("fInbox").onclick = () => { folder = "inbox"; $("fInbox").classList.add("active"); $("fSent").classList.remove("active"); load(); };
-$("fSent").onclick = () => { folder = "sent"; $("fSent").classList.add("active"); $("fInbox").classList.remove("active"); load(); };
-$("refresh").onclick = load;
-
-/* compose */
-function openCompose(to = "", subject = "") {
-  $("to").value = to; $("subject").value = subject; $("body").value = ""; $("sendErr").textContent = "";
-  $("compose").classList.add("open");
+function closeReader() {
+  state.openKey = null;
+  $("app").classList.remove("reading");
+  $("reader").innerHTML = '<div class="placeholder"><b>✦</b>Select a message to read</div>';
+  renderList();
 }
+
+function setFolder(f) {
+  state.folder = f; state.q = ""; $("search").value = "";
+  setFolderUi(); closeReader(); drawer(false); load();
+}
+$("fInbox").onclick = () => setFolder("inbox");
+$("fSent").onclick = () => setFolder("sent");
+$("refresh").onclick = () => load();
+$("search").oninput = (e) => { state.q = e.target.value; renderList(); };
+$("cAll").onclick = () => { state.filter = "all"; $("cAll").classList.add("active"); $("cUnread").classList.remove("active"); renderList(); };
+$("cUnread").onclick = () => { state.filter = "unread"; $("cUnread").classList.add("active"); $("cAll").classList.remove("active"); renderList(); };
+
+/* ---------- compose ---------- */
+function openCompose(to = "", subject = "", body = "") {
+  $("to").value = to; $("subject").value = subject; $("body").value = body; $("sendErr").textContent = "";
+  $("compose").classList.add("open"); drawer(false);
+  (to ? $("body") : $("to")).focus();
+}
+const closeCompose = () => $("compose").classList.remove("open");
 $("composeBtn").onclick = () => openCompose();
-$("cancelSend").onclick = () => $("compose").classList.remove("open");
+$("closeCompose").onclick = closeCompose;
+$("discard").onclick = closeCompose;
 $("sendBtn").onclick = async () => {
   $("sendErr").textContent = "";
+  $("sendBtn").disabled = true;
   try {
     await api("send", { method: "POST", body: JSON.stringify({ to: $("to").value, subject: $("subject").value, body: $("body").value }) });
-    $("compose").classList.remove("open");
-    folder = "sent"; $("fSent").classList.add("active"); $("fInbox").classList.remove("active"); load();
+    closeCompose(); closeReader(); setFolder("sent");
   } catch (e) { $("sendErr").textContent = e.message; }
+  $("sendBtn").disabled = false;
 };
 
-/* auto-refresh inbox every 30s */
-setInterval(() => { if (token && folder === "inbox" && !$("mailView").classList.contains("hide") && !document.querySelector(".view")) load(); }, 30000);
+/* quiet auto-refresh */
+setInterval(() => { if (token && !$("app").classList.contains("hide") && !document.hidden) load(true); }, 30000);
 
-if (token && address) showMail();
+if (token && address) enterMail();
 </script>
 </body>
 </html>

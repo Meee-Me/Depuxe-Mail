@@ -56,6 +56,72 @@ async function sendExternal(from, to, subject, body) {
   return { ok: true };
 }
 
+// ---------- Gmail (read-only, per-user OAuth) ----------
+const gStore = () => getStore("gmail");
+const oauthStore = () => getStore("oauth");
+const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+const gConfigured = () =>
+  !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.TOKEN_ENC_KEY);
+const encKey = () => crypto.createHash("sha256").update(String(process.env.TOKEN_ENC_KEY)).digest();
+function encrypt(text) {
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv("aes-256-gcm", encKey(), iv);
+  const data = Buffer.concat([c.update(text, "utf8"), c.final()]);
+  return { iv: iv.toString("base64"), tag: c.getAuthTag().toString("base64"), data: data.toString("base64") };
+}
+function decrypt(o) {
+  const d = crypto.createDecipheriv("aes-256-gcm", encKey(), Buffer.from(o.iv, "base64"));
+  d.setAuthTag(Buffer.from(o.tag, "base64"));
+  return Buffer.concat([d.update(Buffer.from(o.data, "base64")), d.final()]).toString("utf8");
+}
+async function gAccessToken(username) {
+  const rec = await gStore().get(username, { type: "json" });
+  if (!rec) return null;
+  const r = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      refresh_token: decrypt(rec.token),
+      grant_type: "refresh_token",
+    }),
+  });
+  if (!r.ok) return null;
+  return (await r.json()).access_token;
+}
+async function gGet(at, path) {
+  const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/" + path, {
+    headers: { Authorization: "Bearer " + at },
+  });
+  if (!r.ok) throw new Error("Gmail error " + r.status);
+  return r.json();
+}
+const hdr = (p, n) => ((p && p.headers) || []).find((h) => h.name.toLowerCase() === n)?.value || "";
+const dec = (s) =>
+  String(s || "").replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+const b64u = (s) => Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+function gBody(payload) {
+  let plain = "", html = "";
+  (function walk(p) {
+    if (!p) return;
+    if (p.mimeType === "text/plain" && p.body?.data) plain += b64u(p.body.data);
+    else if (p.mimeType === "text/html" && p.body?.data) html += b64u(p.body.data);
+    (p.parts || []).forEach(walk);
+  })(payload);
+  if (plain) return plain;
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export default async (req) => {
   const url = new URL(req.url);
   const route = url.pathname.replace(/^\/api\//, "").replace(/\/$/, "");
@@ -112,6 +178,33 @@ export default async (req) => {
       return json({ ok: true });
     }
 
+    // ---------- Gmail OAuth callback (browser redirect from Google, no login header) ----------
+    if (route === "gmail/callback" && method === "GET") {
+      const st = url.searchParams.get("state"), code = url.searchParams.get("code");
+      const back = (r) => new Response(null, { status: 302, headers: { Location: "/?gmail=" + r } });
+      if (!gConfigured() || !st || !code) return back("error");
+      const rec = await oauthStore().get(st, { type: "json" });
+      if (rec) await oauthStore().delete(st);
+      if (!rec || rec.expires < Date.now()) return back("error");
+      const tr = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code,
+          client_id: process.env.GOOGLE_CLIENT_ID,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET,
+          redirect_uri: rec.redirect,
+          grant_type: "authorization_code",
+        }),
+      });
+      if (!tr.ok) return back("error");
+      const tok = await tr.json();
+      if (!tok.refresh_token) return back("error");
+      const prof = await gGet(tok.access_token, "profile");
+      await gStore().setJSON(rec.username, { email: prof.emailAddress, token: encrypt(tok.refresh_token), connected: Date.now() });
+      return back("connected");
+    }
+
     // ---------- Everything below needs a login ----------
     const me = await auth(req);
     if (!me) return json({ error: "Please log in." }, 401);
@@ -158,6 +251,74 @@ export default async (req) => {
       }
       await deliver(me, "sent", { from, to, subject, body });
       return json({ ok: true });
+    }
+
+    // ---------- Gmail (logged-in users) ----------
+    if (route === "gmail/status" && method === "GET") {
+      const rec = await gStore().get(me, { type: "json" });
+      return json({ configured: gConfigured(), connected: !!rec, email: rec?.email || null });
+    }
+    if (route === "gmail/start" && method === "POST") {
+      if (!gConfigured()) return json({ error: "Gmail isn't set up on this site yet." }, 501);
+      const st = crypto.randomBytes(24).toString("hex");
+      const redirect = process.env.GOOGLE_REDIRECT_URI || `${url.origin}/api/gmail/callback`;
+      await oauthStore().setJSON(st, { username: me, redirect, expires: Date.now() + 10 * 60 * 1000 });
+      const q = new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        redirect_uri: redirect,
+        response_type: "code",
+        scope: GMAIL_SCOPE,
+        access_type: "offline",
+        prompt: "consent",
+        state: st,
+      });
+      return json({ url: "https://accounts.google.com/o/oauth2/v2/auth?" + q });
+    }
+    if (route === "gmail/disconnect" && method === "POST") {
+      const rec = await gStore().get(me, { type: "json" });
+      if (rec) {
+        try {
+          await fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(decrypt(rec.token)), { method: "POST" });
+        } catch (e) { /* best effort */ }
+        await gStore().delete(me);
+      }
+      return json({ ok: true });
+    }
+    if (route === "gmail/list" && method === "GET") {
+      const at = await gAccessToken(me);
+      if (!at) return json({ error: "Gmail connection expired. Please reconnect Gmail." }, 409);
+      const l = await gGet(at, "messages?maxResults=25&labelIds=INBOX");
+      const msgs = await Promise.all(
+        (l.messages || []).map((m) =>
+          gGet(at, `messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject`)
+        )
+      );
+      return json({
+        messages: msgs.map((m) => ({
+          id: m.id,
+          from: hdr(m.payload, "from"),
+          to: hdr(m.payload, "to"),
+          subject: hdr(m.payload, "subject") || "(no subject)",
+          preview: dec(m.snippet),
+          date: Number(m.internalDate),
+          read: !(m.labelIds || []).includes("UNREAD"),
+        })),
+      });
+    }
+    if (route === "gmail/message" && method === "GET") {
+      const id = url.searchParams.get("id") || "";
+      if (!/^[a-zA-Z0-9]+$/.test(id)) return json({ error: "Not found" }, 404);
+      const at = await gAccessToken(me);
+      if (!at) return json({ error: "Gmail connection expired. Please reconnect Gmail." }, 409);
+      const m = await gGet(at, `messages/${id}?format=full`);
+      return json({
+        id: m.id,
+        from: hdr(m.payload, "from"),
+        to: hdr(m.payload, "to"),
+        subject: hdr(m.payload, "subject") || "(no subject)",
+        date: Number(m.internalDate),
+        body: gBody(m.payload).slice(0, 50000) || dec(m.snippet),
+      });
     }
 
     return json({ error: "Not found" }, 404);

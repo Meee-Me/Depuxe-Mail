@@ -149,6 +149,7 @@
     <div class="menu" id="userMenu">
       <div class="who" id="meAddr"></div>
       <button class="mi" id="themeBtn">Switch light / dark</button>
+      <button class="mi hide" id="gDisc">Disconnect Gmail</button>
       <button class="mi" id="logout">Log out</button>
     </div>
   </div>
@@ -188,6 +189,7 @@
     <button class="primary compose-btn" id="composeBtn">✎ Compose</button>
     <button class="item active" id="fInbox"><span>📥 Inbox</span><span class="badge hide" id="unread"></span></button>
     <button class="item" id="fSent"><span>📤 Sent</span></button>
+    <button class="item" id="fGmail"><span>✉️ Gmail</span></button>
     <div class="foot">Deluxe Mail ✦</div>
   </aside>
 
@@ -320,6 +322,7 @@ function enterMail() {
 function setFolderUi() {
   $("fInbox").classList.toggle("active", state.folder === "inbox");
   $("fSent").classList.toggle("active", state.folder === "sent");
+  $("fGmail").classList.toggle("active", state.folder === "gmail");
 }
 
 function updateUnread() {
@@ -328,7 +331,35 @@ function updateUnread() {
   $("unread").textContent = n; $("unread").classList.toggle("hide", !n);
 }
 
+function connectCard(msg, st) {
+  const ok = !st || st.configured !== false;
+  $("list").innerHTML = `<div class="empty"><div style="font-size:34px;margin-bottom:8px">✉️</div>
+    <strong style="color:var(--text)">${esc(msg)}</strong>
+    <p>${ok ? "Sign in with Google to read your Gmail here. Deluxe Mail only gets read-only access, and you can disconnect any time." : "Gmail isn't set up on this site yet. The site owner needs to add the Google credentials first."}</p>
+    ${ok ? '<button class="primary" id="gConnect">Connect Gmail</button>' : ""}</div>`;
+  if ($("gConnect")) $("gConnect").onclick = async () => {
+    try { const { url } = await api("gmail/start", { method: "POST" }); location.href = url; }
+    catch (e) { alert(e.message); }
+  };
+}
+
+async function loadGmail(silent) {
+  if (!silent) $("list").innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const st = await api("gmail/status");
+    $("gDisc").classList.toggle("hide", !st.connected);
+    if (!st.connected) { state.msgs = []; connectCard("Connect your Gmail", st); return; }
+    const { messages } = await api("gmail/list");
+    state.msgs = messages.map((m) => ({ ...m, key: m.id }));
+    renderList();
+  } catch (e) {
+    if (/reconnect/i.test(e.message)) connectCard(e.message);
+    else if (!silent) $("list").innerHTML = '<div class="empty">' + esc(e.message) + "</div>";
+  }
+}
+
 async function load(silent) {
+  if (state.folder === "gmail") return loadGmail(silent);
   if (!silent) $("list").innerHTML = '<div class="empty">Loading…</div>';
   try {
     const { messages } = await api("list?folder=" + state.folder);
@@ -365,7 +396,9 @@ function renderList() {
 
 async function openMsg(key) {
   try {
-    const m = await api("message?key=" + encodeURIComponent(key));
+    const m = state.folder === "gmail"
+      ? await api("gmail/message?id=" + encodeURIComponent(key))
+      : await api("message?key=" + encodeURIComponent(key));
     state.openKey = key;
     const local = state.msgs.find((x) => x.key === key);
     if (local && !local.read) { local.read = true; updateUnread(); }
@@ -375,7 +408,7 @@ async function openMsg(key) {
       <div class="rbar">
         <button class="backbtn icon" id="back">← Back</button>
         <button id="reply">↩ Reply</button>
-        <button id="del">🗑 Delete</button>
+        ${state.folder === "gmail" ? "" : '<button id="del">🗑 Delete</button>'}
       </div>
       <div class="rbody">
         <h2>${esc(m.subject)}</h2>
@@ -392,7 +425,7 @@ async function openMsg(key) {
       /^re:/i.test(m.subject) ? m.subject : "Re: " + m.subject,
       "\n\n— On " + new Date(m.date).toLocaleString() + ", " + nameOf(m.from) + " wrote:\n" + String(m.body).split("\n").map((l) => "> " + l).join("\n")
     );
-    $("del").onclick = async () => {
+    if ($("del")) $("del").onclick = async () => {
       if (!confirm("Delete this message?")) return;
       await api("delete", { method: "POST", body: JSON.stringify({ key }) });
       state.msgs = state.msgs.filter((x) => x.key !== key);
@@ -414,6 +447,13 @@ function setFolder(f) {
 }
 $("fInbox").onclick = () => setFolder("inbox");
 $("fSent").onclick = () => setFolder("sent");
+$("fGmail").onclick = () => setFolder("gmail");
+$("gDisc").onclick = async () => {
+  if (!confirm("Disconnect Gmail from Deluxe Mail?")) return;
+  await api("gmail/disconnect", { method: "POST" });
+  $("gDisc").classList.add("hide");
+  if (state.folder === "gmail") load();
+};
 $("refresh").onclick = () => load();
 $("search").oninput = (e) => { state.q = e.target.value; renderList(); };
 $("cAll").onclick = () => { state.filter = "all"; $("cAll").classList.add("active"); $("cUnread").classList.remove("active"); renderList(); };
@@ -442,7 +482,13 @@ $("sendBtn").onclick = async () => {
 /* quiet auto-refresh */
 setInterval(() => { if (token && !$("app").classList.contains("hide") && !document.hidden) load(true); }, 30000);
 
-if (token && address) enterMail();
+const gres = new URLSearchParams(location.search).get("gmail");
+if (gres) history.replaceState(null, "", location.pathname);
+if (token && address) {
+  enterMail();
+  if (gres === "connected") setFolder("gmail");
+  else if (gres === "error") alert("Gmail connection failed. Please try again.");
+}
 </script>
 </body>
 </html>

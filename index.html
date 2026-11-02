@@ -161,6 +161,10 @@
     <h1>Get your deluxe address</h1>
     <p class="sub">Pick a name. Your inbox is ready instantly.</p>
     <p class="sub" style="font-size:13px">Deluxe Mail addresses work between Deluxe Mail users.</p>
+    <button type="button" id="googleBtn" style="width:100%;padding:12px;margin-top:6px">🇬 Continue with Google (Gmail only)</button>
+    <p class="sub" style="font-size:12px;margin:6px 0 0">No Deluxe account needed. You get a read-only view of your Gmail.</p>
+    <p class="err" id="googleErr" style="margin:6px 0 0"></p>
+    <p class="sub" style="text-align:center;margin:10px 0 0">— or use a Deluxe address —</p>
     <div class="tabs">
       <button id="tabSignup" class="active">Create account</button>
       <button id="tabLogin">Log in</button>
@@ -299,9 +303,22 @@ $("authForm").onsubmit = async (e) => {
   }
 };
 
+$("googleBtn").onclick = async () => {
+  $("googleErr").textContent = "";
+  try { const { url } = await api("google/start", { method: "POST" }); location.href = url; }
+  catch (e) { $("googleErr").textContent = e.message; }
+};
+
+const isG = () => localStorage.getItem("dm_google") === "1";
+function applyGoogleMode() {
+  const g = isG();
+  ["fInbox", "fSent", "composeBtn"].forEach((id) => $(id).classList.toggle("hide", g));
+}
+
 function logout() {
   token = null; address = null;
-  ["dm_token", "dm_addr", "dm_name"].forEach((k) => localStorage.removeItem(k));
+  ["dm_token", "dm_addr", "dm_name", "dm_google"].forEach((k) => localStorage.removeItem(k));
+  applyGoogleMode();
   $("authView").classList.remove("hide");
   ["app", "userDd", "menuBtn"].forEach((id) => $(id).classList.add("hide"));
   closeReader(); $("compose").classList.remove("open");
@@ -314,7 +331,8 @@ function enterMail() {
   ["app", "userDd", "menuBtn"].forEach((id) => $(id).classList.remove("hide"));
   $("meAddr").textContent = address;
   $("meAv").textContent = ((myName || address || "D")[0] || "D").toUpperCase();
-  state.folder = "inbox"; state.q = ""; $("search").value = "";
+  applyGoogleMode();
+  state.folder = isG() ? "gmail" : "inbox"; state.q = ""; $("search").value = "";
   setFolderUi();
   load();
 }
@@ -407,7 +425,7 @@ async function openMsg(key) {
     $("reader").innerHTML = `
       <div class="rbar">
         <button class="backbtn icon" id="back">← Back</button>
-        <button id="reply">↩ Reply</button>
+        ${isG() ? "" : '<button id="reply">↩ Reply</button>'}
         ${state.folder === "gmail" ? "" : '<button id="del">🗑 Delete</button>'}
       </div>
       <div class="rbody">
@@ -420,7 +438,7 @@ async function openMsg(key) {
       </div>`;
     $("app").classList.add("reading");
     $("back").onclick = closeReader;
-    $("reply").onclick = () => openCompose(
+    if ($("reply")) $("reply").onclick = () => openCompose(
       state.folder === "sent" ? m.to : emailOf(m.from),
       /^re:/i.test(m.subject) ? m.subject : "Re: " + m.subject,
       "\n\n— On " + new Date(m.date).toLocaleString() + ", " + nameOf(m.from) + " wrote:\n" + String(m.body).split("\n").map((l) => "> " + l).join("\n")
@@ -452,6 +470,7 @@ $("gDisc").onclick = async () => {
   if (!confirm("Disconnect Gmail from Deluxe Mail?")) return;
   await api("gmail/disconnect", { method: "POST" });
   $("gDisc").classList.add("hide");
+  if (isG()) { logout(); return; }
   if (state.folder === "gmail") load();
 };
 $("refresh").onclick = () => load();
@@ -482,6 +501,13 @@ $("sendBtn").onclick = async () => {
 /* quiet auto-refresh */
 setInterval(() => { if (token && !$("app").classList.contains("hide") && !document.hidden) load(true); }, 30000);
 
+const hp = new URLSearchParams(location.hash.slice(1));
+if (hp.get("gtoken")) {
+  token = hp.get("gtoken"); address = hp.get("gaddr"); myName = hp.get("gname") || address;
+  localStorage.setItem("dm_token", token); localStorage.setItem("dm_addr", address);
+  localStorage.setItem("dm_name", myName); localStorage.setItem("dm_google", "1");
+  history.replaceState(null, "", location.pathname);
+}
 const gres = new URLSearchParams(location.search).get("gmail");
 if (gres) history.replaceState(null, "", location.pathname);
 if (token && address) {

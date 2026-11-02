@@ -154,7 +154,7 @@ export default async (req) => {
       const b = await req.json();
       const username = clean(b.username, 60).toLowerCase().trim().replace(`@${DOMAIN}`, "");
       const u = await users().get(username, { type: "json" });
-      if (!u || !checkPassword(clean(b.password, 200), u)) return json({ error: "Wrong name or password." }, 401);
+      if (!u || u.google || !checkPassword(clean(b.password, 200), u)) return json({ error: "Wrong name or password." }, 401);
       const token = crypto.randomBytes(32).toString("hex");
       await sessions().setJSON(token, { username, expires: Date.now() + 30 * 864e5 });
       return json({ token, address: `${username}@${DOMAIN}`, displayName: u.displayName });
@@ -176,6 +176,24 @@ export default async (req) => {
         body: clean(b.TextBody || b["body-plain"] || b.text || "", 50000),
       });
       return json({ ok: true });
+    }
+
+    // ---------- Sign in with Google (Gmail-only, no Deluxe account) ----------
+    if (route === "google/start" && method === "POST") {
+      if (!gConfigured()) return json({ error: "Google sign-in isn't set up on this site yet." }, 501);
+      const st = crypto.randomBytes(24).toString("hex");
+      const redirect = process.env.GOOGLE_REDIRECT_URI || `${url.origin}/api/gmail/callback`;
+      await oauthStore().setJSON(st, { mode: "login", redirect, expires: Date.now() + 10 * 60 * 1000 });
+      const q = new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        redirect_uri: redirect,
+        response_type: "code",
+        scope: GMAIL_SCOPE,
+        access_type: "offline",
+        prompt: "consent",
+        state: st,
+      });
+      return json({ url: "https://accounts.google.com/o/oauth2/v2/auth?" + q });
     }
 
     // ---------- Gmail OAuth callback (browser redirect from Google, no login header) ----------
@@ -201,6 +219,17 @@ export default async (req) => {
       const tok = await tr.json();
       if (!tok.refresh_token) return back("error");
       const prof = await gGet(tok.access_token, "profile");
+      if (rec.mode === "login") {
+        // Gmail-only account. The ":" can never appear in a normal username, so nobody can pre-register this id.
+        const gid = "google:" + crypto.createHash("sha256").update(String(prof.emailAddress).toLowerCase()).digest("hex").slice(0, 24);
+        const existing = await users().get(gid, { type: "json" });
+        if (!existing) await users().setJSON(gid, { username: gid, displayName: prof.emailAddress, google: true, email: prof.emailAddress, created: Date.now() });
+        await gStore().setJSON(gid, { email: prof.emailAddress, token: encrypt(tok.refresh_token), connected: Date.now() });
+        const sess = crypto.randomBytes(32).toString("hex");
+        await sessions().setJSON(sess, { username: gid, expires: Date.now() + 30 * 864e5 });
+        const frag = new URLSearchParams({ gtoken: sess, gaddr: prof.emailAddress, gname: prof.emailAddress });
+        return new Response(null, { status: 302, headers: { Location: "/#" + frag } });
+      }
       await gStore().setJSON(rec.username, { email: prof.emailAddress, token: encrypt(tok.refresh_token), connected: Date.now() });
       return back("connected");
     }
@@ -238,8 +267,9 @@ export default async (req) => {
       const subject = clean(b.subject || "(no subject)", 300);
       const body = clean(b.body, 50000);
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json({ error: "Enter a valid recipient address." }, 400);
-      const from = `${me}@${DOMAIN}`;
       const u = await users().get(me, { type: "json" });
+      if (u?.google) return json({ error: "Gmail-only accounts can read mail but not send. Create a Deluxe account to send." }, 403);
+      const from = `${me}@${DOMAIN}`;
 
       if (to.endsWith(`@${DOMAIN}`)) {
         const rcpt = to.split("@")[0];
